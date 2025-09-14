@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Streamer</title>
+  <style>
+    body {margin:0;font-family:Arial,sans-serif;background:#121212;color:#fff;}
+    header {background:#1f1f1f;padding:10px;text-align:center;color:#bb86fc;font-size:24px;font-weight:bold;}
+    .video-container {position:relative;width:100%;max-width:1000px;margin:0 auto;background:#000;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;border-bottom:2px solid #333;}
+    video {width:100%;height:100%;border:none;}
+    .loading {position:absolute;color:#bb86fc;font-size:20px;display:none;}
+    .search-bar {text-align:center;padding:15px;}
+    .search-bar input {width:80%;padding:10px;border-radius:6px;border:none;background:#2c2c2c;color:#fff;}
+    .button-bar {display:flex;justify-content:center;gap:10px;padding:10px;background:#1e1e1e;}
+    .button-bar button {padding:10px 20px;border:none;border-radius:5px;background:#03dac6;color:#000;font-weight:bold;cursor:pointer;}
+    .button-bar button:hover {background:#018786;}
+    .movies {display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:15px;padding:20px;}
+    .movie-card {background:#1f1f1f;border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .2s;}
+    .movie-card:hover {transform:scale(1.05);}
+    .movie-card img {width:100%;height:220px;object-fit:cover;}
+    .movie-card p {padding:10px;font-size:14px;text-align:center;}
+  </style>
+</head>
+<body>
+
+<header> Terabox Movie Streamer</header>
+
+<div class="video-container">
+  <div id="loading" class="loading">Loading...</div>
+  <video id="player" controls poster=""></video>
+</div>
+
+<div class="search-bar">
+  <input type="text" id="search" placeholder="Search movies...">
+</div>
+
+<div class="button-bar">
+  <button>Movies</button>
+  <button>Web Series</button>
+  <button>Live TV</button>
+</div>
+
+<div id="movie-list" class="movies">
+  <!-- Movie cards dynamically load  -->
+</div>
+
+<script>
+async function loadMovies() {
+  const res = await fetch("https://raw.githubusercontent.com/mdnazmul582378/Moviest/refs/heads/main/Movie");
+  const text = await res.text();
+  const lines = text.split("\n");
+  let html = "";
+
+  for (let i=0; i<lines.length; i++) {
+    if (lines[i].startsWith("#EXTINF")) {
+      const nameMatch = lines[i].match(/tvg-name="([^"]+)"/);
+      const logoMatch = lines[i].match(/tvg-logo="([^"]+)"/);
+      const link = lines[i+1].trim();
+      const name = nameMatch ? nameMatch[1] : "Unknown";
+      const logo = logoMatch ? logoMatch[1] : "";
+
+      html += `
+        <div class="movie-card" onclick="playMovie('${link}')">
+          <img src="${logo}" alt="${name}">
+          <p>${name}</p>
+        </div>
+      `;
+    }
+  }
+  document.getElementById("movie-list").innerHTML = html;
+}
+
+async function playMovie(link) {
+  const loading = document.getElementById("loading");
+  const player = document.getElementById("player");
+  loading.style.display = "block";
+  player.src = "";
+
+  try {
+    const res = await fetch("https://3c0402e7ba1c.ngrok.io/get_video_url", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({link:link})
+    });
+    const data = await res.json();
+    if (data.success && data.url) {
+      player.src = data.url;
+      player.play();
+    } else {
+      alert("Error: " + (data.message || "No video link found"));
+    }
+  } catch(e) {
+    alert("Request failed: " + e.message);
+  } finally {
+    loading.style.display = "none";
+  }
+}
+
+loadMovies();
+</script>
+
+</body>
+</html>
