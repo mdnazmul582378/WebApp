@@ -24,7 +24,7 @@
 </head>
 <body>
 
-<header> Terabox Movie Streamer</header>
+<header>  Terabox Movie Streamer</header>
 
 <div class="video-container">
   <div id="loading" class="loading">Loading...</div>
@@ -42,8 +42,7 @@
 </div>
 
 <div id="movie-list" class="movies">
-  <!-- Movie cards dynamically load  -->
-</div>
+  </div>
 
 <script>
 async function loadMovies() {
@@ -78,7 +77,10 @@ async function playMovie(link) {
   player.src = "";
 
   try {
-    const res = await fetch("https://3c0402e7ba1c.ngrok.io/get_video_url", {
+    // এখানে তোমার ngrok এর নতুন URL টি বসাতে হবে
+    const ngrokUrl = "https://7cf124135e83.ngrok-free.app";
+
+    const res = await fetch(`${ngrokUrl}/get_video_url`, {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({link:link})
