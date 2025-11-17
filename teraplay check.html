@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Media Player - Ngrok Stream</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- New: HLS.js library for M3U8 streaming support -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script> 
+    <style>
+        /* CSS Formatting Rule Applied: Professional CSS Formatting Rule (2025-09-15) */
+        /* Body */ body{margin:0;background-color:#121212;overflow:hidden;color:#fff;font-family:'Arial',sans-serif;scroll-behavior:smooth;}
+        /* Main Video Container */ .fxvp{position:relative;width:100%;aspect-ratio:16/9;background-color:#000;z-index:99999;}
+        /* Video + Overlay */ .fxvp video,.fxvp .locx{position:absolute;top:0;left:0;width:100%;height:100%;justify-content:center;align-items:center;}
+        /* Loading Overlay */ .locx{display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;text-align:center;background:rgb(0 0 0 / .8);z-index:10;}
+        /* Loading Spinner */ .losp{width:50px;height:50px;border:4px solid #fff;border-top-color:#0d6efd;border-radius:50%;animation:spin 1s linear infinite;}
+        /* Animation */ @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+        /* Search/Control Bar Container */ .fuck{position:relative;background:#121212;padding:4px;width:100%;box-sizing:border-box;z-index:1000;display:flex;align-items:center;margin-top:2px;}
+        /* Search Input Field */ .madarchod{width:67%;padding:7px 12px;border:1px solid #444;border-radius:10px;font-size:16px;outline:none;box-sizing:border-box;background:#1e1e1e;color:#fff;box-shadow:0 1px 2px rgb(0 0 0 / .2);transition:border-color 0.3s,box-shadow 0.3s;margin-right:8px;}
+        /* Light Off Button */ .jskol{width:30%;background:linear-gradient(180deg,#444,#2a2a2a);border:none;border-radius:10px;color:#fff;padding:8px 15px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgb(0 0 0 / .5);transition:all 0.3s ease;white-space:nowrap;position:relative;overflow:hidden;}
+        /* Light Off Button Before */ .jskol:before{content:'';position:absolute;top:-10px;left:-10px;right:-10px;bottom:-10px;background:linear-gradient(45deg,#ffd700,#ff8c00,#ffd700);z-index:-1;transition:all 0.3s ease;opacity:0;}
+        /* Light Off Button Active Before */ .jskol.lto:before{opacity:.8;animation:lightEffect 2s infinite;}
+        /* Light Off Button Active */ .jskol.lto{background:linear-gradient(180deg,#ffd700,#ff8c00);color:#000;}
+        /* Light Effect Animation */ @keyframes lightEffect{0%{filter:hue-rotate(0deg);}50%{filter:hue-rotate(90deg);}100%{filter:hue-rotate(0deg);}}
+        /* Search Input Focus */ .madarchod:focus{border-color:#00BFFF;background:#2a2a2a;}
+        /* Placeholder Text Style */ .madarchod::placeholder{color:#777;font-style:italic;}
+        /* Search Input Hover */ .madarchod:hover{border-color:#555;}
+        /* Light Off Overlay FIX 3: Overlay should be below video player and buttons should be clickable */ .mcdo{position:fixed;top:0;left:0;width:100%;height:100%;background:rgb(0 0 0 / .8);z-index:999;pointer-events:none;opacity:0;transition:opacity 0.5s ease;}
+        /* Light Off Overlay Active */ .mcdo.active{opacity:1;pointer-events:auto;}
+        /* Button/Filter Bar Container */ .bicibici{position:sticky;top:calc(56.25vw + 5px);background:#121212;z-index:999;display:flex;flex-direction:column;gap:3px;padding-top:2px;padding-bottom:12px;box-sizing:border-box;overflow-x:hidden;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;white-space:nowrap;scroll-snap-type:x mandatory;box-shadow:0 2px 6px rgb(0 0 0 / .6),inset 0 -1px 0 rgb(255 255 255 / .05);margin:0 4px;}
+        /* Button Scroll Wrapper */ .cudi{display:flex;gap:3px;width:100%;overflow-x:auto;scrollbar-width:none;}
+        /* Button Style */ .bn{background:linear-gradient(180deg,#3a3a3a,#1e1e1e);color:#fff;padding:8px 15px;border:none;border-radius:10px;font-size:16px;font-weight:700;min-width:calc((100vw - 3px*2 - 4px*2)/3);box-shadow:inset 1px 1px 2px rgb(255 255 255 / .08),inset -1px -1px 2px rgb(0 0 0 / .6),2px 2px 6px rgb(0 0 0 / .8),0 4px 8px rgb(0 0 0 / .7);transition:all 0.3s ease;cursor:pointer;text-align:center;flex-shrink:0;scroll-snap-align:start;}
+        /* Button Hover */ .bn:hover{background:linear-gradient(180deg,#4a4a4a,#262626);box-shadow:inset 1px 1px 3px rgb(0 0 0 / .4),2px 2px 8px rgb(0 0 0 / .9),0 6px 12px rgb(0 0 0 / .7);}
+        /* Active Button */ .bn.active{background:linear-gradient(180deg,#00e5ff,#0097a7);box-shadow:inset 2px 2px 4px rgb(0 0 0 / .4),inset -2px -2px 4px rgb(255 255 255 / .15),3px 3px 8px rgb(0 0 0 / .7),0 4px 12px rgb(0 229 255 / .5);}
+        /* Dot Container */ .dt-container{display:flex;justify-content:space-evenly;align-items:center;gap:8px;padding:5px 0 0 0;width:100%;}
+        /* Dot Style */ .dt{width:10px;height:10px;border-radius:50%;background:radial-gradient(circle at 30% 30%,rgb(255 255 255 / .9),rgb(200 200 200 / .2));box-shadow:inset -1px -1px 2px rgb(255 255 255 / .4),inset 1px 1px 3px rgb(0 0 0 / .6),0 2px 6px rgb(0 0 0 / .5);transition:all 0.3s ease;cursor:pointer;}
+        /* Active Dot */ .dt.active{background:radial-gradient(circle at 30% 30%,#00e5ff,#007a85);transform:scale(1.1);}
+        /* Movie List Container */ .mlst{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;max-height:calc(var(--viewport-height,100vh) - (56.25vw + 124px));padding:5px;overflow-y:auto;width:100%;}
+        /* Movie Card */ .movie{background:#121212;border-radius:12px;overflow:hidden;text-align:center;box-shadow:6px 6px 12px rgb(0 0 0 / .7),-6px -6px 12px rgb(255 255 255 / .1);transition:transform 0.3s,box-shadow 0.3s,background 0.3s;cursor:pointer;display:flex;flex-direction:column;align-items:center;border:2px solid #e5e5e5;gap:1px;}
+        /* Active Movie Card */ .movie.active{border:2px solid gold;background:linear-gradient(145deg,#2c3e50,#3498db);box-shadow:8px 8px 16px rgb(0 0 0 / .6),-8px -8px 16px rgb(255 255 255 / .1);}
+        /* Active Movie Text */ .movie.active p{color:#fff;}
+        /* Movie Image */ .movie img{width:100%;aspect-ratio:3/4;object-fit:cover;border-bottom:2px solid rgb(255 255 255 / .1);border-radius:8px 8px 0 0;margin-bottom:4px;background:#212121;transition:opacity 0.3s ease;}
+        /* Movie Image Placeholder/Loading */ .movie img[data-src]{opacity:.3;}
+        /* Movie Image Loaded */ .movie img:not([data-src]){opacity:1;}
+        /* Movie Title Text */ .movie p{font-size:10px;color:#fff;margin-top:2px;padding:0 4px;height:auto;text-align:center;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;text-align:justify;margin-bottom:3px;}
+        /* Full Screen Overlay */ .fz{position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgb(0 0 0 / .8);z-index:9998;display:none;transition:opacity 0.4s ease;opacity:0;visibility:hidden;}
+        /* Full Screen Overlay Active */ .fz.active{opacity:1;visibility:visible;}
+        /* Floating Button */ .flwb{position:fixed;bottom:10px;right:10px;width:50px;height:50px;background:#2980b9;border-radius:50%;display:flex;justify-content:center;align-items:center;color:#fff;font-size:22px;border:2px solid #2c3e50;box-shadow:inset 0 2px 4px rgb(0 0 0 / .4),0 4px 10px rgb(0 0 0 / .3);cursor:pointer;transition:all 0.3s ease-in-out;z-index:9998;opacity:.9;transform:scale(1);outline:none;animation:hand-wave 2.5s infinite,pulse-blue 2.5s infinite;}
+        /* Floating Button Active */ .flwb.active{background:#c0392b!important;color:#fff!important;animation:hand-wave 2.5s infinite,pulse-red 2.5s infinite!important;box-shadow:inset 0 2px 4px rgb(0 0 0 / .4),0 4px 10px rgb(0 0 0 / .3);border:2px solid #a42c22;}
+        /* Floating Button Hover */ .flwb:hover{transform:scale(1.1);box-shadow:inset 0 3px 5px rgb(0 0 0 / .5),0 6px 15px rgb(0 0 0 / .5);opacity:1;background:#3498db;}
+        /* Floating Button Wave Animation */ @keyframes hand-wave{0%{transform:rotate(0deg);}10%{transform:rotate(14deg);}20%{transform:rotate(-8deg);}30%{transform:rotate(14deg);}40%{transform:rotate(-4deg);}50%{transform:rotate(10deg);}60%{transform:rotate(0deg);}100%{transform:rotate(0deg);}}
+        /* Floating Button Pulse Blue Animation */ @keyframes pulse-blue{0%{box-shadow:0 0 0 0 rgb(44 62 80 / .7);}70%{box-shadow:0 0 0 12px #fff0;}100%{box-shadow:0 0 0 0 #fff0;}}
+        /* Floating Button Pulse Red Animation */ @keyframes pulse-red{0%{box-shadow:0 0 0 0 rgb(192 57 43 / .7);}70%{box-shadow:0 0 0 12px #fff0;}100%{box-shadow:0 0 0 0 #fff0;}}
+        /* Modal Container */ #fmox{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:92%;max-width:400px;background:#1a1a1a;padding:25px;border-radius:15px;box-shadow:0 10px 40px rgb(0 0 0 / .8);text-align:center;color:#e0e0e0;transition:transform 0.5s ease,opacity 0.5s ease;min-height:200px;z-index:999999;border:1px solid #333;opacity:0;visibility:hidden;transform:translate(-50%,-50%) scale(.9);}
+        /* Modal Active */ #fmox.active{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);}
+        /* Modal Close Button */ .flow-close-button{position:absolute;top:10px;right:10px;font-size:24px;color:#95a5a6;cursor:pointer;transition:color 0.3s,transform 0.3s;}
+        /* Modal Close Button Hover */ .flow-close-button:hover{color:#ecf0f1;transform:rotate(90deg);}
+        /* Modal Header */ .fmih{font-size:26px;color:#3498db;text-align:center;margin-bottom:-1px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+        /* Modal Subtitle */ .fmits{font-size:13px;color:#bdc3c7;text-align:center;margin-bottom:20px;line-height:1.4;font-style:italic;}
+        /* Modal Form Body */ .kjaf{display:flex;flex-direction:column;gap:15px;margin-bottom:15px;}
+        /* Modal Input Wrapper */ .jku8 input{width:100%;padding:12px;border-radius:8px;border:1px solid #333;font-size:15px;display:block;font-weight:700;background:#2c2c2c;color:#ecf0f1;box-shadow:inset 0 1px 2px rgb(0 0 0 / .5);transition:all 0.3s ease;margin-bottom:8px;}
+        /* Modal Input Focus */ .jku8 input:focus{background:#3a3a3a;outline:none;border-color:#3498db;}
+        /* Modal Button Group */ .ffm91{display:flex;justify-content:space-between;gap:8px;margin-bottom:-10px;margin-top:25px;}
+        /* Modal Fetch/Check Button */ .jku8 #ffch-bn{background:#555;color:#fff;cursor:pointer;transition:0.3s;box-shadow:inset 0 1px 2px rgb(255 255 255 / .1),inset 0 -1px 2px rgb(0 0 0 / .5),0 2px 5px rgb(0 0 0 / .4);width:49%;padding:12px;border-radius:8px;border:none;font-weight:700;}
+        /* Modal Fetch Button Hover */ .jku8 #ffch-bn:hover{background:#444;}
+        /* Modal Submit Button */ .jku8 button[type='submit']{background:#e67e22;color:#fff;cursor:pointer;transition:0.3s;box-shadow:inset 0 1px 2px rgb(255 255 255 / .1),inset 0 -1px 2px rgb(0 0 0 / .5),0 2px 5px rgb(0 0 0 / .4);text-transform:uppercase;letter-spacing:1px;font-weight:700;width:49%;padding:12px;border-radius:8px;border:none;}
+        /* Modal Submit Button Hover */ .jku8 button[type='submit']:hover{background:#d35400;}
+        /* Modal Message Area */ .fm81{display:none;font-size:16px;font-weight:700;margin-top:20px;text-align:center;padding:15px;border-radius:10px;box-shadow:0 4px 10px rgb(0 0 0 / .5);}
+        /* Modal Message Success */ .fm81.success{background:#27ae60!important;color:white!important;border:1px solid #229954;box-shadow:0 0 10px rgb(39 174 96 / .5);}
+        /* Modal Message Error */ .fm81.error{background:#c0392b!important;color:white!important;border:1px solid #a42c22;box-shadow:0 0 10px rgb(192 57 43 / .5);}
+        /* Modal Icon */ .fm81 i{font-size:50px;margin-bottom:15px;text-shadow:2px 2px 8px rgb(0 0 0 / .3);}
+        /* Modal Link Button */ .ftb01 a{font-size:18px;font-weight:700;color:#fff;text-decoration:none;background-color:#08c;border-radius:8px;padding:12px 20px;display:flex;justify-content:center;align-items:center;gap:10px;box-shadow:0 2px 5px rgb(0 0 0 / .4);transition:background 0.3s,box-shadow 0.3s;cursor:pointer;text-align:center;margin-top:20px;}
+        /* Modal Link Button Hover */ .ftb01 a:hover{background:#0077b3;}
+        /* Modal Link Icon */ .ftb01 a i{font-size:20px;}
+        /* Desktop/PC Viewport */ @media screen and (min-width:768px){#fmox{width:80%;max-width:600px;padding:30px;}.flwb{width:60px;height:60px;bottom:20px;right:20px;font-size:28px;}.fmih{font-size:32px;}.fmits{font-size:15px;}.jku8 input{padding:15px;font-size:16px;}.jku8 button[type='submit'],.jku8 #ffch-bn{padding:15px;font-size:16px;}.fm81{font-size:18px;}.ftb01 a{font-size:20px;padding:15px 25px;}.page-container{display:flex;width:100%;height:100vh;box-sizing:border-box;}.fxvp{position:relative;width:75%;height:100vh;flex-shrink:0;}.sidebar{position:relative;width:25%;height:100vh;display:flex;flex-direction:column;align-items:center;padding:10px;box-sizing:border-box;overflow:hidden;}.fuck{position:fixed;top:0;right:0;width:25%;margin:0 2px;padding:8px;display:flex;gap:5px;z-index:1000;}.madarchod{width:70%;}.jskol{width:30%;}.bicibici{position:fixed;top:50px;left:75%;width:25%;padding:6px 12px 6px 12px;display:flex;justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;gap:5px;box-shadow:none;margin:0;white-space:nowrap;}.bn{min-width:calc((25vw - 12px*2 - 4px*2)/3);padding:6px;font-size:14px;scroll-snap-align:start;}.mlst{position:fixed;top:100px;left:75%;width:25%;max-height:calc(100vh - 100px);padding:5px;gap:5px;grid-template-columns:repeat(2,1fr);margin:0;}.mlst::-webkit-scrollbar{width:8px;}.mlst::-webkit-scrollbar-thumb{background-color:#555;border-radius:4px;}.mlst::-webkit-scrollbar-track{background-color:#121212;}}
+        /* FIX 3: Light Off Button Toggle State CSS - Initial state (Light On) */
+        .jskol.light-on {background:linear-gradient(180deg,#ffd700,#ff8c00); color:#000;}
+        .jskol.light-on i {color:#000;}
+    </style>
+</head>
+<body class="light-on"> <div class="mcdo" id="light-off-overlay"></div> <div class="page-container">
+
+        <div id="video-player-container" class="fxvp">
+            <!-- Initial video element removed, content will be dynamically generated by JS -->
+            <div id="loading-overlay" class="locx" style="display: flex;"> 
+                <div class="losp"></div>
+                <p>Select a movie to start playing...</p>
+            </div>
+        </div>
+
+        <div class="sidebar">
+        
+            <div class="fuck">
+                <input type="text" id="search-input" class="madarchod" placeholder="Search title or ID...">
+                <button id="light-off-button" class="jskol light-on" title="Light Off/On"> <i class="fa-solid fa-lightbulb"></i>
+                </button>
+            </div>
+
+            <div class="bicibici">
+                <div id="button-bar" class="cudi">
+                    <button class="bn active" data-group="All">All</button>
+                </div>
+                <div class="dt-container">
+                    </div>
+            </div>
+
+            <div id="movie-list" class="mlst">
+                </div>
+
+        </div> </div> <button class="flwb" id="floating-action-button">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+    <div id="fmox">
+        <span class="flow-close-button" id="modal-close-button"><i class="fa-solid fa-xmark"></i></span>
+        <div class="fmih">Feedback / Input</div>
+        <p class="fmits">Enter your new M3U8 Link here, or provide feedback.</p>
+        <form class="kjaf">
+            <div class="jku8">
+                <input type="text" id="new-url-input" placeholder="New Movie URL (M3U8 Raw)">
+            </div>
+            <div class="ffm91">
+                <button type="button" id="ffch-bn">Check URL</button>
+                <button type="submit">Submit</button>
+            </div>
+        </form>
+        <div class="fm81" id="modal-message"></div>
+    </div>
+
+
+    <script>
+        // --- JavaScript Logic for Data Fetching and Dynamic UI ---
+
+        const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/mdnazmul582378/Mov4KHub/refs/heads/main/movie';
+
+        // Element Mappings - UPDATED: Removed 'video' and added 'videoPlayerContainer'
+        const elements = {
+            body: document.body,
+            videoPlayerContainer: document.getElementById('video-player-container'), // Added for dynamic playback
+            loadingOverlay: document.getElementById('loading-overlay'),
+            movieList: document.getElementById('movie-list'),
+            searchInput: document.getElementById('search-input'),
+            buttonBar: document.getElementById('button-bar'),
+            lightToggle: document.getElementById('light-off-button'),
+            darkOverlay: document.getElementById('light-off-overlay'),
+            modal: document.getElementById('fmox'),
+            floatBtn: document.getElementById('floating-action-button'),
+            modalCloseBtn: document.getElementById('modal-close-button'),
+        };
+
+        let allMovies = []; 
+        let currentFilter = 'All'; 
+        let state = {
+            isLightOn: true, 
+        };
+
+        // Utility Functions
+        function updateViewportHeight() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+            document.documentElement.style.setProperty('--viewport-height', `${window.innerHeight}px`);
+        }
+
+        function toggleLight() {
+            state.isLightOn = !state.isLightOn;
+            if (state.isLightOn) {
+                // Light On State
+                elements.lightToggle.classList.remove('lto');
+                elements.lightToggle.classList.add('light-on');
+                elements.darkOverlay.classList.remove('active');
+                elements.body.classList.remove('light-off');
+            } else {
+                // Light Off State
+                elements.lightToggle.classList.remove('light-on');
+                elements.lightToggle.classList.add('lto');
+                elements.darkOverlay.classList.add('active');
+                elements.body.classList.add('light-off');
+            }
+        }
+
+        // --- NEW/UPDATED: Ngrok/HLS Player Logic ---
+        // This function now handles the POST request to ngrok and sets up the HLS player.
+        async function loadVideoFromLink(link, videoName = 'Unknown Video') {
+            if (!link) return;
+            
+            // Clear the container and show dynamic loading state
+            elements.videoPlayerContainer.innerHTML = `
+                <div id="dynamic-loader" class="locx" style="display: flex;"> 
+                    <div class="losp"></div>
+                    <p>Processing link for: ${videoName}...</p>
+                </div>`;
+
+            try {
+                // The ngrok URL provided by the user
+                const ngrokUrl = 'https://5c0931768ccf.ngrok-free.app';
+                const response = await fetch(`${ngrokUrl}/get_video_url`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        link: link,
+                        video_name: videoName 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.url) {
+                    const videoUrl = data.url;
+                    const thumbnailUrl = data.thumbnail;
+                    
+                    // Replace the loading message with the new video element
+                    // Note: 'playsinline' is important for mobile browsers
+                    const videoHtml = `<video id="main-video" controls autoplay playsinline ${thumbnailUrl ? `poster="${thumbnailUrl}"` : ''} class="w-full h-full object-contain"></video>`;
+                    elements.videoPlayerContainer.innerHTML = videoHtml;
+                    const videoElement = document.getElementById('main-video');
+
+                    // Check for HLS support and use the library if available
+                    if (typeof Hls !== 'undefined' && Hls.isSupported() && (videoUrl.includes('.m3u8') || videoUrl.includes('fast_stream'))) {
+                        const hls = new Hls({
+                            maxBufferLength: 300,
+                            maxMaxBufferLength: 360,
+                            maxBufferHole: 0.5,
+                            liveDurationInfinity: true,
+                            maxLoadingDelay: 20
+                        });
+
+                        hls.loadSource(videoUrl);
+                        hls.attachMedia(videoElement);
+                        // Try to autoplay, catch potential block errors
+                        hls.on(Hls.Events.MANIFEST_PARSED, () => videoElement.play().catch(e => console.log('Autoplay blocked:', e)));
+                    } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                        // Native HLS playback for Safari/iOS
+                        videoElement.src = videoUrl;
+                        videoElement.play().catch(e => console.log('Autoplay blocked (Native HLS):', e));
+                    } else {
+                        // Direct video playback (MP4, etc.)
+                        videoElement.src = videoUrl;
+                        videoElement.play().catch(e => console.log('Autoplay blocked (Direct):', e));
+                    }
+                } else {
+                    // Handle API error/failure message
+                    elements.videoPlayerContainer.innerHTML = `<div class="locx" style="background:none;"><p class="text-danger mt-3" style="color:red; font-weight:bold;">${data.message || 'Error fetching video data.'}</p></div>`;
+                }
+            } catch (error) {
+                // Handle network/fetch errors
+                console.error('Network/Ngrok Error:', error);
+                elements.videoPlayerContainer.innerHTML = `<div class="locx" style="background:none;"><p class="text-danger mt-3" style="color:red; font-weight:bold;">An API error occurred. Check server status.</p></div>`;
+            }
+        }
+        
+        // --- Core Parsing Logic (Unchanged) ---
+        function parseM3U8Entry(entry) {
+            const lines = entry.trim().split('\n');
+            const infoLine = lines[0] ? lines[0].trim() : '';
+            const link = lines[1] ? lines[1].trim() : '';
+            
+            if (!infoLine || !link || !infoLine.startsWith('#EXTINF')) return null;
+
+            const tvgIdMatch = infoLine.match(/tvg-id="([^"]+)"/);
+            const tvgNameMatch = infoLine.match(/tvg-name="([^"]+)"/);
+            const tvgLogoMatch = infoLine.match(/tvg-logo="([^"]+)"/);
+            const groupTitleMatch = infoLine.match(/group-title="([^"]+)"/);
+            const releaseDateMatch = infoLine.match(/release="([^"]+)"/);
+            
+            let releaseDate = null;
+            if (releaseDateMatch) {
+                releaseDate = new Date(releaseDateMatch[1]);
+            }
+
+            return {
+                tvgId: tvgIdMatch ? tvgIdMatch[1] : 'N/A',
+                tvgName: tvgNameMatch ? tvgNameMatch[1] : 'Unknown Title',
+                tvgLogo: tvgLogoMatch ? tvgLogoMatch[1] : 'N/A',
+                groupTitle: groupTitleMatch ? groupTitleMatch[1].split('|').map(g => g.trim()) : ['N/A'], 
+                releaseDate: releaseDate,
+                link: link
+            };
+        }
+        
+        // --- UI and Interaction Functions ---
+        
+        function createMovieCard(data) {
+            const card = document.createElement('div');
+            card.className = 'movie';
+            card.setAttribute('data-link', data.link);
+            card.setAttribute('data-title', data.tvgName.toLowerCase());
+            
+            card.innerHTML = `
+                ${data.tvgLogo !== 'N/A' ? `<img src="${data.tvgLogo}" loading="lazy" alt="${data.tvgName}">` : '<div style="width:100%; aspect-ratio:3/4; background:#333; display:flex; justify-content:center; align-items:center; border-radius:8px 8px 0 0;">No Poster</div>'}
+                <p>${data.tvgName}</p>
+            `;
+            
+            // UPDATED: Pass the movie name (data.tvgName) to the handler
+            card.addEventListener('click', () => handleMovieClick(card, data.link, data.tvgName)); 
+            return card;
+        }
+        
+        // UPDATED: handleMovieClick now calls the new ngrok processing function
+        function handleMovieClick(clickedCard, link, videoName) {
+            document.querySelectorAll('.movie').forEach(card => {
+                card.classList.remove('active');
+            });
+            clickedCard.classList.add('active');
+
+            // Use the new asynchronous loader
+            loadVideoFromLink(link, videoName);
+        }
+        
+        // Removed old video.addEventListener('canplay', ...) and video.addEventListener('error', ...)
+        // as the new loadVideoFromLink handles the loading/error states dynamically inside the container.
+
+        function displayMovies(moviesToDisplay) {
+            elements.movieList.innerHTML = '';
+            
+            if (moviesToDisplay.length === 0) {
+                elements.movieList.innerHTML = '<p style="text-align:center; color:#777; width:100%; padding-top:20px;">No movies found matching the criteria.</p>';
+                return;
+            }
+
+            moviesToDisplay.forEach((data) => {
+                const card = createMovieCard(data);
+                elements.movieList.appendChild(card);
+            });
+        }
+        
+        function filterAndSearch() {
+            const searchTerm = elements.searchInput.value.toLowerCase();
+            
+            const filteredMovies = allMovies.filter(movie => {
+                const matchesFilter = currentFilter === 'All' || movie.groupTitle.some(group => group === currentFilter);
+                const matchesSearch = movie.tvgName.toLowerCase().includes(searchTerm) || movie.tvgId.toLowerCase().includes(searchTerm);
+                return matchesFilter && matchesSearch;
+            });
+            
+            displayMovies(filteredMovies);
+        }
+
+        elements.searchInput.addEventListener('input', filterAndSearch);
+
+        function createFilterButtons(groups) {
+            elements.buttonBar.querySelectorAll('.bn:not([data-group="All"])').forEach(btn => btn.remove());
+            
+            groups.forEach(group => {
+                const btn = document.createElement('button');
+                btn.className = 'bn';
+                btn.textContent = group;
+                btn.setAttribute('data-group', group);
+                btn.addEventListener('click', () => {
+                    handleFilterClick(group);
+                });
+                elements.buttonBar.appendChild(btn);
+            });
+        }
+        
+        function handleFilterClick(group) {
+            currentFilter = group;
+            
+            elements.buttonBar.querySelectorAll('.bn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-group') === group) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            filterAndSearch();
+            elements.movieList.scrollTop = 0;
+        }
+
+        // Initial setup for the 'All' button
+        elements.buttonBar.querySelector('[data-group="All"]').addEventListener('click', () => handleFilterClick('All'));
+
+        // Light Off Button Event Listener
+        elements.lightToggle.addEventListener('click', toggleLight);
+
+        // Floating Button/Modal Logic
+        elements.floatBtn.addEventListener('click', () => {
+            elements.modal.classList.add('active');
+            elements.floatBtn.classList.add('active');
+        });
+
+        elements.modalCloseBtn.addEventListener('click', () => {
+            elements.modal.classList.remove('active');
+            elements.floatBtn.classList.remove('active');
+        });
+        
+        // --- Main Data Fetching Function ---
+        async function fetchAndDisplayData() {
+            // Update loading message for data fetch
+            elements.loadingOverlay.innerHTML = '<div class="losp"></div><p>Fetching data from GitHub...</p>';
+            
+            try {
+                const response = await fetch(GITHUB_RAW_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const dataText = await response.text();
+                const rawEntries = dataText.split('#EXTINF').filter(e => e.trim() !== '');
+
+                allMovies = rawEntries
+                    .map(entry => parseM3U8Entry('#EXTINF' + entry))
+                    .filter(entry => entry !== null); 
+
+                if (allMovies.length === 0) {
+                    elements.loadingOverlay.innerHTML = '<p style="color:red; font-size:16px;">Error: No valid movie entries found.</p>';
+                    return;
+                }
+
+                const allGroups = new Set();
+                allMovies.forEach(movie => {
+                    movie.groupTitle.forEach(group => allGroups.add(group.trim()));
+                });
+                
+                const sortedGroups = Array.from(allGroups).filter(g => g !== 'N/A').sort();
+                createFilterButtons(sortedGroups);
+                
+                displayMovies(allMovies);
+                
+                // Final message after data load is complete
+                elements.loadingOverlay.innerHTML = '<div class="losp"></div><p>Select a movie to start playing...</p>';
+
+
+            } catch (error) {
+                console.error('Fetch error:', error);
+                elements.loadingOverlay.innerHTML = `<p style="color:red; font-size:16px;">Failed to load data: ${error.message}.</p>`;
+            }
+        }
+
+        // Run functions
+        updateViewportHeight();
+        window.addEventListener('resize', updateViewportHeight);
+        fetchAndDisplayData();
+
+    </script>
+
+</body>
+</html>
